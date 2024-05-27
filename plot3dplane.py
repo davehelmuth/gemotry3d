@@ -8,7 +8,7 @@ import math
 import numpy as np
 import numpy.typing as npt
 from typing import TypeAlias
-import matplotlib.pyplot as plt  # type: ignore
+import matplotlib.pyplot as plt
 
 from dataclasses import dataclass, field
 
@@ -41,7 +41,7 @@ class PlaneGeneralForm:
     Args:
         a: The constant a. Default 0.0
         b: The constant b. Default 0.0
-        c: The concstnat c. Must be more than zero  Default 0.01
+        c: The constant c. Must be more than zero  Default 0.01
         known_point: A known point on the plane. Default Point(x=0.0, y=0.0, z=0.0)
 
     Note: 
@@ -67,7 +67,7 @@ class PlaneGeneralForm:
     c: float = field(default=0.01)
     """The constant c"""
 
-    known_point: Point = field(default=Point(x=0.0, y=0.0, z=0.0))
+    known_point: Point = field(default_factory=lambda: Point(x=0.0, y=0.0, z=0.0))
     """A known point on the plane."""
 
     def __post_init__(self):
@@ -210,12 +210,12 @@ def plot_plane(plane: PlaneComputationalForm) -> None:
     Z = plane.calculate_z_values(mesh_grid)
 
     X, Y = mesh_grid
-    surf = ax.plot_surface(X, Y, Z, alpha=0.5, rstride=1, cstride=1, color='b')
+    ax.plot_surface(X, Y, Z, alpha=0.5, rstride=1, cstride=1, color='b')  # type: ignore
 
     # Labels and titles
     ax.set_xlabel('X coordinates')
     ax.set_ylabel('Y coordinates')
-    ax.set_zlabel('Z coordinates')
+    ax.set_zlabel('Z coordinates')    # type: ignore
     ax.set_title('3D Plane from equation z = ax + by + c')
 
     # Annotating the four corners
@@ -223,7 +223,7 @@ def plot_plane(plane: PlaneComputationalForm) -> None:
     corners = [(-10, -10), (-10, 10), (10, -10), (10, 10)]
     for cx, cy in corners:
         cz = plane.a * cx + plane.b * cy + plane.c
-        ax.text(cx, cy, cz, f"({cx}, {cy}, {cz:.1f})", color='red', fontsize=12)
+        ax.text(cx, cy, cz, f"({cx}, {cy}, {cz:.1f})", color='red', fontsize=12)  # type: ignore
 
     # Show the plot
     plt.show()
