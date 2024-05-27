@@ -1,0 +1,9 @@
+name: studymath
+
+channels:
+  - conda-forge
+  
+dependencies:
+  - python=3.12
+  - numpy=1.26
+  - matplotlib=3.8
