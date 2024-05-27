@@ -7,6 +7,7 @@ forms of the plane's equation.
 import math
 import numpy as np
 import numpy.typing as npt
+from typing import TypeAlias
 import matplotlib.pyplot as plt  # type: ignore
 
 from dataclasses import dataclass, field
@@ -50,7 +51,7 @@ class PlaneGeneralForm:
 
         - where:
             - a, b, c are constants of which c is never equal to zero
-            - x1, y1, z1 repressent a known point on the plane
+            - x1, y1, z1 represent a known point on the plane
             - x, y, z represents any unknown point on the plane
     
     Raises:
@@ -90,14 +91,14 @@ class PlaneGeneralForm:
         return self.known_point.z
 
 
-XYPairs = tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]
+XYPairs: TypeAlias = tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]
 """
 A tuple of two 2D NumPy arrays representing the X and Y coordinate pairs 
 that make up a mesh grid.
 
 This type alias is used to represent a pair of 2D NumPy arrays where:
-- The first element is the X coordinates array.
-- The second element is the Y coordinates array.
+- The first element in the Tuple is the X coordinates array.
+- The second element in the Tuple is the Y coordinates array.
 
 The arrays are typically generated using `numpy.meshgrid` from two 1D arrays 
 created by `numpy.linspace`. These pairs of X and Y coordinates can be used 
@@ -173,11 +174,14 @@ class PlaneComputationalForm:
 
         return X, Y
 
-    def calculate_z_values(self, mesh_grid: XYPairs) -> np.ndarray:
+    def calculate_z_values(self, mesh_grid: XYPairs) -> npt.NDArray[np.float64]:
         """Calculate Z Values from meshgrid.
         
         Args:
             mesh_grid: The x,y value pairs used to calculate z
+
+        Returns:
+            np.ndarray: Computed Z values.
         """
 
         X, Y = mesh_grid
