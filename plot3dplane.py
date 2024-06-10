@@ -2,15 +2,19 @@
 This script defines and demonstrates the use of classes for representing and 
 manipulating a plane in 3D space, utilizing both general and computational 
 forms of the plane's equation.
+
 """
 
+# Standard libraries
 import math
+from dataclasses import dataclass, field
+from typing import TypeAlias
+
+# Installed libraries
 import numpy as np
 import numpy.typing as npt
-from typing import TypeAlias
 import matplotlib.pyplot as plt
-
-from dataclasses import dataclass, field
+from matplotlib.widgets import TextBox
 
 
 @dataclass
@@ -33,15 +37,14 @@ class Point:
     """The z coordinate of the point"""
 
 
-
 @dataclass
 class PlaneGeneralForm:
     """Represents the equation of plane in General Form.
     
     Args:
-        a: The constant a. Default 0.0
-        b: The constant b. Default 0.0
-        c: The constant c. Must be more than zero  Default 0.01
+        a: The coefficient a. Default 0.0
+        b: The coefficient b. Default 0.0
+        c: The coefficient c. Must be more than zero  Default 0.01
         known_point: A known point on the plane. Default Point(x=0.0, y=0.0, z=0.0)
 
     Note: 
@@ -50,22 +53,22 @@ class PlaneGeneralForm:
             a(x - x1) + b(y - y1) + c(z - z1) = 0
 
         - where:
-            - a, b, c are constants of which c is never equal to zero
+            - a, b, c are coefficients of which c is never equal to zero
             - x1, y1, z1 represent a known point on the plane
             - x, y, z represents any unknown point on the plane
     
     Raises:
-        ValueError: Constant c can not be within 1e-9 of zero
+        ValueError: Coefficient c can not be within 1e-9 of zero
     """
 
     a: float = field(default=0.0)
-    """The constant a"""
+    """The coefficient a"""
 
     b: float = field(default=0.0)
-    """The constant b"""
+    """The coefficient b"""
 
     c: float = field(default=0.01)
-    """The constant c"""
+    """The coefficient c"""
 
     known_point: Point = field(default_factory=lambda: Point(x=0.0, y=0.0, z=0.0))
     """A known point on the plane."""
@@ -105,7 +108,8 @@ created by `numpy.linspace`. These pairs of X and Y coordinates can be used
 for further calculations, such as evaluating a function Z = f(X, Y) over a 
 grid in a 3D space.
 
-Examples:
+Examples::
+
     x = np.linspace(-10, 10, 20)
     y = np.linspace(-10, 10, 20)
     X, Y = np.meshgrid(x, y)
@@ -118,22 +122,25 @@ class PlaneComputationalForm:
     
     To be utilized by software, the equation of a plane must be in this form. 
 
-    Args:
-        general_form: The equation of a plane in general form
-
     Note:
         The equation in computational form is:
 
             Z = aX + bY + c
 
         - where:
-            - a, b, c are constants. 
+            - `a`, `b` are coefficients and `c` is a constant
                 - These are not the same values from the general equation.
             - X, Y each pair calculates a unique value of Z 
 
     """
 
     def __init__(self, a: float, b: float, c: float) -> None:
+        """
+        Args:
+            a: The coefficient `a` in equation `Z = aX + bY + c`
+            b: The coefficient `b` in equation `Z = aX + bY + c`
+            c: The constant `c` in equation `Z = aX + bY + c`
+        """
         self.a = a
         self.b = b
         self.c = c
@@ -147,7 +154,8 @@ class PlaneComputationalForm:
             gen_equation: The general form of the plane equation.
 
         Note:
-            - This is an alternative constructor to be used when
+            - This is an alternative constructor when you want to convert an 
+            instance of PlaneGeneralForm to the computation form. 
         """
 
         a = -1.0 * (gen_equation.a / gen_equation.c)
@@ -195,49 +203,121 @@ class PlaneComputationalForm:
         return f'PlaneComputationalForm(a={self.a}, b={self.b}, c={self.c})'
 
 
-def plot_plane(plane: PlaneComputationalForm) -> None:
-    """Plot the plane in 3D space
-    
-    Args:
-        plane: The plane to be plotted in 3D space
+
+class PlottingWindow:
+    """The Window that displays the plotted plane in 3D space.
+
+    The `PlottingWindow` class is designed to only allow for a single instance
+    of a plotting window. 
+
+    Example::
+
+        plane = PlaneGeneralForm(0.0, 0.0, 0.001, Point(0, 0, 0))
+        plotting_window = PlottingWindow(plane)
+
     """
 
-    # Plotting
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
+    _instance = None
+    _initialized = False
 
-    mesh_grid = plane.generate_xy_pairs()
-    Z = plane.calculate_z_values(mesh_grid)
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = super(PlottingWindow, cls).__new__(cls)
+        return cls._instance
 
-    X, Y = mesh_grid
-    ax.plot_surface(X, Y, Z, alpha=0.5, rstride=1, cstride=1, color='b')  # type: ignore
+    def __init__(self, plane: PlaneGeneralForm):
+        """Provide the plane you would like to plot in 3D space.
 
-    # Labels and titles
-    ax.set_xlabel('X coordinates')
-    ax.set_ylabel('Y coordinates')
-    ax.set_zlabel('Z coordinates')    # type: ignore
-    ax.set_title('3D Plane from equation z = ax + by + c')
+        Args:
+            plane: The plane object to be plotted.
+        
+        """
+        if PlottingWindow._initialized:
+            return
+        
+        self.initialized = True
 
-    # Annotating the four corners
-    
-    corners = [(-10, -10), (-10, 10), (10, -10), (10, 10)]
-    for cx, cy in corners:
-        cz = plane.a * cx + plane.b * cy + plane.c
-        ax.text(cx, cy, cz, f"({cx}, {cy}, {cz:.1f})", color='red', fontsize=12)  # type: ignore
+        self.__setup_plot()
 
-    # Show the plot
-    plt.show()
+        self.__initialize_text_boxes()
 
+        # Set up the event handlers for the text boxes
+        self.text_box_a.on_text_change(self.__update)
+        self.text_box_b.on_text_change(self.__update)
+        self.text_box_c.on_text_change(self.__update)
+        self.text_box_x1.on_text_change(self.__update)
+        self.text_box_y1.on_text_change(self.__update)
+        self.text_box_z1.on_text_change(self.__update)
 
-def main():
-
-    #  a(x - x1) + b(y - y1) + c(z - z1) = 0
-
-    myplane = PlaneGeneralForm(a=1.0, b=0.0, c=0.001)
-
-    myplane3d = PlaneComputationalForm.init_from_general_form(myplane)
-
-    plot_plane(myplane3d)
+        self.__plot_plane(PlaneComputationalForm.init_from_general_form(plane))
+        self.__show()
 
 
-if __name__ == '__main__': main()
+    def __setup_plot(self):
+        self.fig, self._ax = plt.subplots()
+        plt.subplots_adjust(bottom=0.35)  # Adjust to prevent overlap of widgets and plot
+        self._ax = self.fig.add_subplot(111, projection='3d')
+
+
+    def __initialize_text_boxes(self):
+        # Initialize TextBoxes for user to modify the plotted plane
+
+        self.text_box_a = TextBox(
+            plt.axes((0.2, 0.05, 0.1, 0.05)), 'A', initial=str(plane.a)
+        )
+        self.text_box_b = TextBox(
+            plt.axes((0.4, 0.05, 0.1, 0.05)), 'B', initial=str(plane.b)
+        )
+        self.text_box_c = TextBox(
+            plt.axes((0.6, 0.05, 0.1, 0.05)), 'C', initial=str(plane.c)
+        )
+        self.text_box_x1 = TextBox(
+            plt.axes((0.2, 0.15, 0.1, 0.05)), 'X1', initial=str(plane.x1)
+        )
+        self.text_box_y1 = TextBox(
+            plt.axes((0.4, 0.15, 0.1, 0.05)), 'Y1', initial=str(plane.y1)
+        )
+        self.text_box_z1 = TextBox(
+            plt.axes((0.6, 0.15, 0.1, 0.05)), 'Z1', initial=str(plane.z1)
+        )
+
+    def __update(self, val):
+
+        try: 
+            a = float(self.text_box_a.text)
+            b = float(self.text_box_b.text)
+            c = float(self.text_box_c.text)
+            x1 = float(self.text_box_x1.text)
+            y1 = float(self.text_box_y1.text)
+            z1 = float(self.text_box_z1.text)
+
+
+            known_point = Point(x=x1, y=y1, z=z1)
+            updated_plane = PlaneGeneralForm(a=a, b=b, c=c, known_point=known_point)
+            computational_plane = PlaneComputationalForm.init_from_general_form(updated_plane)
+
+            self._ax.clear()  # Clear the axis for the new plot
+            self.__plot_plane(computational_plane)
+            plt.draw()
+        except Exception:
+            pass
+
+    def __plot_plane(self, plane):
+        mesh_grid = plane.generate_xy_pairs()
+        Z = plane.calculate_z_values(mesh_grid)
+
+        X, Y = mesh_grid
+        self._ax.plot_surface(X, Y, Z, alpha=0.5, rstride=1, cstride=1, color='b')
+        self._ax.set_xlabel('X coordinates')
+        self._ax.set_ylabel('Y coordinates')
+        self._ax.set_zlabel('Z coordinates')
+        self._ax.set_title('3D Plane from equation z = ax + by + c')
+
+    def __show(self):
+        plt.show()
+
+
+# Usage example:
+if __name__ == '__main__':
+    plane = PlaneGeneralForm(0.0, 0.0, 0.001, Point(0, 0, 0))
+    plotting_window = PlottingWindow(plane)
