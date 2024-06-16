@@ -265,22 +265,22 @@ class PlottingWindow:
         # Initialize TextBoxes for user to modify the plotted plane
 
         self.text_box_a = TextBox(
-            plt.axes((0.2, 0.05, 0.1, 0.05)), 'A', initial=str(plane.a)
+            plt.axes((0.2, 0.05, 0.1, 0.05)), '$a$ ', initial=str(plane.a)
         )
         self.text_box_b = TextBox(
-            plt.axes((0.4, 0.05, 0.1, 0.05)), 'B', initial=str(plane.b)
+            plt.axes((0.4, 0.05, 0.1, 0.05)), '$b$ ', initial=str(plane.b)
         )
         self.text_box_c = TextBox(
-            plt.axes((0.6, 0.05, 0.1, 0.05)), 'C', initial=str(plane.c)
+            plt.axes((0.6, 0.05, 0.1, 0.05)), '$c$ ', initial=str(plane.c)
         )
         self.text_box_x1 = TextBox(
-            plt.axes((0.2, 0.15, 0.1, 0.05)), 'X1', initial=str(plane.x1)
+            plt.axes((0.2, 0.15, 0.1, 0.05)), '$x1$ ', initial=str(plane.x1)
         )
         self.text_box_y1 = TextBox(
-            plt.axes((0.4, 0.15, 0.1, 0.05)), 'Y1', initial=str(plane.y1)
+            plt.axes((0.4, 0.15, 0.1, 0.05)), '$y1$ ', initial=str(plane.y1)
         )
         self.text_box_z1 = TextBox(
-            plt.axes((0.6, 0.15, 0.1, 0.05)), 'Z1', initial=str(plane.z1)
+            plt.axes((0.6, 0.15, 0.1, 0.05)), '$z1$ ', initial=str(plane.z1)
         )
 
     def __update(self, val):
@@ -322,7 +322,8 @@ class PlottingWindow:
         self._ax.set_xlabel('X coordinates')
         self._ax.set_ylabel('Y coordinates')
         self._ax.set_zlabel('Z coordinates')
-        self._ax.set_title('3D Plane from equation z = ax + by + c')
+        title = '3D Plane from equation $a(x - x1) + b(y - y1) + c(z - z1) = 0$'
+        self._ax.set_title(title)
 
     def __show(self):
         plt.show()
