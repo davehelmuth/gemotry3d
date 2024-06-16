@@ -235,6 +235,8 @@ class PlottingWindow:
         if PlottingWindow._initialized:
             return
         
+        self._plane_general_form = plane
+        
         self.initialized = True
 
         self.__setup_plot()
@@ -294,6 +296,7 @@ class PlottingWindow:
 
             known_point = Point(x=x1, y=y1, z=z1)
             updated_plane = PlaneGeneralForm(a=a, b=b, c=c, known_point=known_point)
+            self._plane_general_form = updated_plane  # A dependency for __plot_plane
             computational_plane = PlaneComputationalForm.init_from_general_form(updated_plane)
 
             self._ax.clear()  # Clear the axis for the new plot
@@ -305,9 +308,17 @@ class PlottingWindow:
     def __plot_plane(self, plane):
         mesh_grid = plane.generate_xy_pairs()
         Z = plane.calculate_z_values(mesh_grid)
-
         X, Y = mesh_grid
+        known_point = self._plane_general_form.known_point
         self._ax.plot_surface(X, Y, Z, alpha=0.5, rstride=1, cstride=1, color='b')
+        self._ax.scatter(
+            known_point.x, 
+            known_point.y, 
+            known_point.z, 
+            color='orange', 
+            s=100, 
+            label='Known Point on Plane'
+        )
         self._ax.set_xlabel('X coordinates')
         self._ax.set_ylabel('Y coordinates')
         self._ax.set_zlabel('Z coordinates')
