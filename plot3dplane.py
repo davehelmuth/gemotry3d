@@ -169,15 +169,34 @@ class PlaneComputationalForm:
         return cls(a, b, c)
     
     @staticmethod
-    def generate_xy_pairs() -> XYPairs:
-        """Generate 400 X, Y pairs that can be used to calculate z values
-        
+    def generate_xy_pairs(axis_draw_length: int=20) -> XYPairs:
+        """Generate a minimum of 400 X, Y pairs that can be used to 
+        calculate z values.
+
+        Args:
+            axis_draw_length: The size of both the x and y axis.
+
         Returns:
-            A mesh like 2D grid of x,y pairs to be used to calculate the Z 
-            values for a function (i.e. plane) in 3D space.
+            A mesh-like 2D grid of x, y pairs to be used to calculate the Z 
+            values for a function (i.e., plane) in 3D space.
+
+        Raises:
+            ValueError: If axis_draw_length is less than 20.
+
+        Notes:
+            The axis limits are symmetrically centered around zero. The limits 
+            are determined by dividing the axis_draw_length by 2 and rounding 
+            to the nearest integer.
         """
-        x = np.linspace(-10, 10, 20)
-        y = np.linspace(-10, 10, 20)
+
+        if axis_draw_length < 20:
+            raise ValueError("Minimum valid value is 20")
+
+        low = 0 - axis_draw_length // 2
+        high = 0 + axis_draw_length // 2
+
+        x = np.linspace(low, high, axis_draw_length)
+        y = np.linspace(low, high, axis_draw_length)
         X, Y = np.meshgrid(x, y)
 
         return X, Y
@@ -305,14 +324,25 @@ class PlottingWindow:
         except Exception:
             pass
 
-    def __plot_plane(self, plane):
-        mesh_grid = plane.generate_xy_pairs()
+    def __plot_plane(self, plane: PlaneComputationalForm):
+        known_point = self._plane_general_form.known_point
+
+        draw_dimensions = 20  
+        x_coordinate = abs(round(known_point.x))
+        y_coordinate = abs(round(known_point.y))
+        if x_coordinate > (draw_dimensions // 2):
+            draw_dimensions = round(x_coordinate * 0.25) + (x_coordinate * 2)
+        if y_coordinate > (draw_dimensions // 2):
+            draw_dimensions = round(y_coordinate * 0.25) + (y_coordinate * 2)
+        if not (draw_dimensions % 2 == 0):
+            draw_dimensions = draw_dimensions + 1
+
+        mesh_grid = plane.generate_xy_pairs(axis_draw_length=draw_dimensions)
         Z = plane.calculate_z_values(mesh_grid)
         X, Y = mesh_grid
-        known_point = self._plane_general_form.known_point
         self._ax.plot_surface(X, Y, Z, alpha=0.5, rstride=1, cstride=1, color='b')
         self._ax.scatter(
-            known_point.x, 
+            known_point.x,
             known_point.y, 
             known_point.z, 
             color='orange', 
