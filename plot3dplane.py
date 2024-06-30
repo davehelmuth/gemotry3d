@@ -176,8 +176,8 @@ class PlaneComputationalForm:
     
     @staticmethod
     def generate_xy_pairs(axis_draw_length: int = 20) -> XYPairs:
-        """Generate a minimum of 400 X, Y pairs that can be used to 
-        calculate Z values.
+        """Generate 400 X, Y pairs (samples) that can be used to calculate Z 
+        values.
 
         Args:
             axis_draw_length: The size of both the x and y axis.
@@ -201,8 +201,11 @@ class PlaneComputationalForm:
         low = 0 - axis_draw_length // 2
         high = 0 + axis_draw_length // 2
 
-        x = np.linspace(low, high, axis_draw_length)
-        y = np.linspace(low, high, axis_draw_length)
+        # Fixed number of points per axis for consistent performance
+        points_per_axis = 20
+
+        x = np.linspace(low, high, points_per_axis)
+        y = np.linspace(low, high, points_per_axis)
         X, Y = np.meshgrid(x, y)
 
         return X, Y
