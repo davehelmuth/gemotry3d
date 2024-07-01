@@ -14,6 +14,7 @@ To Run the script:
 # Standard libraries
 import math
 from dataclasses import dataclass, field
+from enum import Enum, unique
 from typing import TypeAlias, Any
 
 # Installed libraries
@@ -163,10 +164,8 @@ class PlaneComputationalForm:
             PlaneGeneralForm and then transforms it into an instance of 
             PlaneComputationalForm.
         """
-
         a = -1.0 * (gen_equation.a / gen_equation.c)
         b = -1.0 * (gen_equation.b / gen_equation.c)
-
         addend0 = (gen_equation.a * gen_equation.x1) / gen_equation.c
         addend1 = (gen_equation.b * gen_equation.y1) / gen_equation.c
         addend2 = gen_equation.z1
@@ -194,7 +193,6 @@ class PlaneComputationalForm:
             are determined by dividing the axis_draw_length by 2 and rounding 
             to the nearest integer.
         """
-
         if axis_draw_length < 20:
             raise ValueError("Minimum valid value is 20")
 
@@ -219,12 +217,9 @@ class PlaneComputationalForm:
         Returns:
             np.ndarray: Computed Z values.
         """
-
         X, Y = mesh_grid
-
         # Computationally friendly version of plane equation
         Z = self.a * X + self.b * Y + self.c
-
         return Z
 
     def __repr__(self) -> str:
@@ -242,6 +237,14 @@ class PlottingWindow:
         plane = PlaneGeneralForm(0.0, 0.0, 0.001, Point(0, 0, 0))
         plotting_window = PlottingWindow(plane)
     """
+
+    # Declare the text box attributes
+    text_box_a: TextBox
+    text_box_b: TextBox
+    text_box_c: TextBox
+    text_box_x1: TextBox
+    text_box_y1: TextBox
+    text_box_z1: TextBox
 
     _instance = None
     _initialized = False
@@ -281,6 +284,7 @@ class PlottingWindow:
         )
         self.__plot_plane_surface(x, y, z)
         self.__plot_known_point(self._plane_general_form.known_point)
+        self._ax.legend(loc='best')
         plt.show()
 
     def __initialize_plot(self):
@@ -293,30 +297,75 @@ class PlottingWindow:
         plt.subplots_adjust(bottom=0.35)  # Adjust to prevent overlap of widgets and plot
         self._ax = self.fig.add_subplot(111, projection='3d')
 
+    @unique
+    class __BoxXLocal(Enum):
+        """The predefined x locations a texbox could be located within the 
+        matplotlib UI window.
+        
+        Note:
+            Each column is a location along the x-axis of the matplotlib UI widget.
+        """
+        
+        COLUMN0 = 0.3
+        COLUMN1 = 0.5
+        COLUMN2 = 0.7
+
+    @unique
+    class __BoxYLocal(Enum):
+        """The predefined y locations a texbox could be located within the 
+        matplotlib UI window.
+        
+        Note:
+            Each row is a location along the y-axis of the matplotlib UI widget.
+        """
+        ROW0 = 0.05
+        ROW1 = 0.15
+
+    @dataclass
+    class __TextBoxShape:
+        """The location and dimensions of a textbox UI element located within 
+        the matplotlib UI window."""
+
+        x_location: 'PlottingWindow.__BoxXLocal'
+        y_location: 'PlottingWindow.__BoxYLocal'
+        width: float = 0.1
+        height: float = 0.05
+
+        @property
+        def as_tuple(self) -> tuple[float, float, float, float]:
+            return self.x_location.value, self.y_location.value, self.width, self.height
+
     def __initialize_text_boxes(self):
         """Initialize TextBoxes so the user can modify the plotted plane.
 
         Creates TextBoxes for each coefficient and known point coordinate,
         setting up their initial values based on the plane's attributes.
         """
-        self.text_box_a = TextBox(
-            plt.axes((0.2, 0.05, 0.1, 0.05)), '$a$ ', initial=str(self._plane_general_form.a)
-        )
-        self.text_box_b = TextBox(
-            plt.axes((0.4, 0.05, 0.1, 0.05)), '$b$ ', initial=str(self._plane_general_form.b)
-        )
-        self.text_box_c = TextBox(
-            plt.axes((0.6, 0.05, 0.1, 0.05)), '$c$ ', initial=str(self._plane_general_form.c)
-        )
-        self.text_box_x1 = TextBox(
-            plt.axes((0.2, 0.15, 0.1, 0.05)), '$x1$ ', initial=str(self._plane_general_form.x1)
-        )
-        self.text_box_y1 = TextBox(
-            plt.axes((0.4, 0.15, 0.1, 0.05)), '$y1$ ', initial=str(self._plane_general_form.y1)
-        )
-        self.text_box_z1 = TextBox(
-            plt.axes((0.6, 0.15, 0.1, 0.05)), '$z1$ ', initial=str(self._plane_general_form.z1)
-        )
+        
+        text_box_configs = {
+            'a': ('Plane Coefficients ☞     $a$ ', self._plane_general_form.a, 
+                  PlottingWindow.__BoxXLocal.COLUMN0, PlottingWindow.__BoxYLocal.ROW0),
+            'b': ('$b$ ', self._plane_general_form.b, 
+                  PlottingWindow.__BoxXLocal.COLUMN1, PlottingWindow.__BoxYLocal.ROW0),
+            'c': ('$c$ ', self._plane_general_form.c, 
+                  PlottingWindow.__BoxXLocal.COLUMN2, PlottingWindow.__BoxYLocal.ROW0),
+            'x1': ('Known Point in 3D space ☞   $x1$ ', self._plane_general_form.x1, 
+                   PlottingWindow.__BoxXLocal.COLUMN0, PlottingWindow.__BoxYLocal.ROW1),
+            'y1': ('$y1$ ', self._plane_general_form.y1, 
+                   PlottingWindow.__BoxXLocal.COLUMN1, PlottingWindow.__BoxYLocal.ROW1),
+            'z1': ('$z1$ ', self._plane_general_form.z1, 
+                   PlottingWindow.__BoxXLocal.COLUMN2, PlottingWindow.__BoxYLocal.ROW1)
+        }
+        for key, (label, initial, x_loc, y_loc) in text_box_configs.items():
+            txtbox_loc = PlottingWindow.__TextBoxShape(
+                x_location=x_loc,
+                y_location=y_loc
+            )
+            setattr(self, f'text_box_{key}', TextBox(
+                ax=plt.axes(txtbox_loc.as_tuple),
+                label=label,
+                initial=str(initial)
+            ))
 
     def __update(self, val: Any):
         """Update the plot with the newly changed values from the text boxes.
