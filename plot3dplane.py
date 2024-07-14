@@ -22,6 +22,7 @@ import numpy as np
 import numpy.typing as npt
 import matplotlib.pyplot as plt
 from matplotlib.widgets import TextBox
+from mpl_toolkits.mplot3d import Axes3D  # type: ignore
 
 
 @dataclass
@@ -235,10 +236,10 @@ class PlottingWindow:
     Example::
 
         plane = PlaneGeneralForm(0.0, 0.0, 0.001, Point(0, 0, 0))
-        plotting_window = PlottingWindow(plane)
+        PlottingWindow.setup_plot_in_3d_space(plane)
     """
 
-    # Declare the text box attributes
+    # Declare UI components here (Makes mypy happy)
     text_box_a: TextBox
     text_box_b: TextBox
     text_box_c: TextBox
@@ -246,56 +247,67 @@ class PlottingWindow:
     text_box_y1: TextBox
     text_box_z1: TextBox
 
+    # Plotting components
+    _ax: Axes3D
+    _plane_general_form: PlaneGeneralForm
+
+    # Requird attributres for Singleton class
     _instance = None
     _initialized = False
+
 
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
             cls._instance = super(PlottingWindow, cls).__new__(cls)
         return cls._instance
 
-    def __init__(self, plane: PlaneGeneralForm):
-        """Provide the plane you would like to plot in 3D space.
+    @classmethod
+    def setup_plot_in_3d_space(cls, plane: PlaneGeneralForm):
+        """Initialize 3D plotting
 
         Args:
-            plane: The plane object to be plotted.
+            plane: The plane object to plot.
+
+        Note:
+            This method serves as the constructor for this class.
         """
         if PlottingWindow._initialized:
             return
         
-        self._plane_general_form = plane
+        cls._plane_general_form = plane
         
         PlottingWindow._initialized = True
 
-        self.__initialize_plot()
-        self.__initialize_text_boxes()
+        cls.__initialize_plot()
+        cls.__initialize_text_boxes()
 
         # Set up the event handlers for the text boxes
-        self.text_box_a.on_text_change(self.__update)
-        self.text_box_b.on_text_change(self.__update)
-        self.text_box_c.on_text_change(self.__update)
-        self.text_box_x1.on_text_change(self.__update)
-        self.text_box_y1.on_text_change(self.__update)
-        self.text_box_z1.on_text_change(self.__update)
+        cls.text_box_a.on_text_change(cls.__update)
+        cls.text_box_b.on_text_change(cls.__update)
+        cls.text_box_c.on_text_change(cls.__update)
+        cls.text_box_x1.on_text_change(cls.__update)
+        cls.text_box_y1.on_text_change(cls.__update)
+        cls.text_box_z1.on_text_change(cls.__update)
 
-        x, y, z = self.calculate_xyz_table_for_plane(
-            plane=PlaneComputationalForm.init_from_general_form(self._plane_general_form),
-            known_point=self._plane_general_form.known_point
+        x, y, z = cls.calculate_xyz_table_for_plane(
+            plane=PlaneComputationalForm.init_from_general_form(cls._plane_general_form),
+            known_point=cls._plane_general_form.known_point
         )
-        self.__plot_plane_surface(x, y, z)
-        self.__plot_known_point(self._plane_general_form.known_point)
-        self._ax.legend(loc='best')
+        cls.__plot_plane_surface(x, y, z)
+        cls.__plot_known_point(cls._plane_general_form.known_point)
+        cls._ax.legend(loc='best')
         plt.show()
 
-    def __initialize_plot(self):
+    @classmethod
+    def __initialize_plot(cls):
         """Initialize the matplotlib plot.
 
         Sets up the figure and axis for a 3D plot. Adjusts the subplot to prevent
         overlap with widgets and sets up the 3D projection.
         """
-        self.fig, self._ax = plt.subplots()
+        cls.fig, cls._ax = plt.subplots()
         plt.subplots_adjust(bottom=0.35)  # Adjust to prevent overlap of widgets and plot
-        self._ax = self.fig.add_subplot(111, projection='3d')
+        cls._ax = cls.fig.add_subplot(111, projection='3d')
 
     @unique
     class __BoxXLocal(Enum):
@@ -332,10 +344,11 @@ class PlottingWindow:
         height: float = 0.05
 
         @property
-        def as_tuple(self) -> tuple[float, float, float, float]:
-            return self.x_location.value, self.y_location.value, self.width, self.height
+        def as_tuple(cls) -> tuple[float, float, float, float]:
+            return cls.x_location.value, cls.y_location.value, cls.width, cls.height
 
-    def __initialize_text_boxes(self):
+    @classmethod
+    def __initialize_text_boxes(cls):
         """Initialize TextBoxes so the user can modify the plotted plane.
 
         Creates TextBoxes for each coefficient and known point coordinate,
@@ -343,17 +356,17 @@ class PlottingWindow:
         """
         
         text_box_configs = {
-            'a': ('Plane Coefficients ☞     $a$ ', self._plane_general_form.a, 
+            'a': ('Plane Coefficients ☞     $a$ ', cls._plane_general_form.a, 
                   PlottingWindow.__BoxXLocal.COLUMN0, PlottingWindow.__BoxYLocal.ROW0),
-            'b': ('$b$ ', self._plane_general_form.b, 
+            'b': ('$b$ ', cls._plane_general_form.b, 
                   PlottingWindow.__BoxXLocal.COLUMN1, PlottingWindow.__BoxYLocal.ROW0),
-            'c': ('$c$ ', self._plane_general_form.c, 
+            'c': ('$c$ ', cls._plane_general_form.c, 
                   PlottingWindow.__BoxXLocal.COLUMN2, PlottingWindow.__BoxYLocal.ROW0),
-            'x1': ('Known Point in 3D space ☞   $x1$ ', self._plane_general_form.x1, 
+            'x1': ('Known Point in 3D space ☞   $x1$ ', cls._plane_general_form.x1, 
                    PlottingWindow.__BoxXLocal.COLUMN0, PlottingWindow.__BoxYLocal.ROW1),
-            'y1': ('$y1$ ', self._plane_general_form.y1, 
+            'y1': ('$y1$ ', cls._plane_general_form.y1, 
                    PlottingWindow.__BoxXLocal.COLUMN1, PlottingWindow.__BoxYLocal.ROW1),
-            'z1': ('$z1$ ', self._plane_general_form.z1, 
+            'z1': ('$z1$ ', cls._plane_general_form.z1, 
                    PlottingWindow.__BoxXLocal.COLUMN2, PlottingWindow.__BoxYLocal.ROW1)
         }
         for key, (label, initial, x_loc, y_loc) in text_box_configs.items():
@@ -361,25 +374,26 @@ class PlottingWindow:
                 x_location=x_loc,
                 y_location=y_loc
             )
-            setattr(self, f'text_box_{key}', TextBox(
+            setattr(cls, f'text_box_{key}', TextBox(
                 ax=plt.axes(txtbox_loc.as_tuple),
                 label=label,
                 initial=str(initial)
             ))
 
-    def __update(self, val: Any):
+    @classmethod
+    def __update(cls, val: Any):
         """Update the plot with the newly changed values from the text boxes.
         
         When the user changes the values in the text boxes, this method is called
         to update the plane's equation and replot the plane with the new values.
         """
         try:
-            a = float(self.text_box_a.text)
-            b = float(self.text_box_b.text)
-            c = float(self.text_box_c.text)
-            x1 = float(self.text_box_x1.text)
-            y1 = float(self.text_box_y1.text)
-            z1 = float(self.text_box_z1.text)
+            a = float(cls.text_box_a.text)
+            b = float(cls.text_box_b.text)
+            c = float(cls.text_box_c.text)
+            x1 = float(cls.text_box_x1.text)
+            y1 = float(cls.text_box_y1.text)
+            z1 = float(cls.text_box_z1.text)
         except ValueError:
             # NOTE: Plane will only update when the textbox contains a numeric value
             pass
@@ -389,16 +403,17 @@ class PlottingWindow:
             c = c if c != 0 else 0.001  # Prevent divide by zero error
             new_plane = PlaneGeneralForm(a, b, c, known_point=new_known_point)
 
-            x, y, z = self.calculate_xyz_table_for_plane(
+            x, y, z = cls.calculate_xyz_table_for_plane(
                 plane=PlaneComputationalForm.init_from_general_form(new_plane),
                 known_point=new_known_point
             )
-            self._ax.clear()  # Clear the axis for the new plot
-            self.__plot_plane_surface(x, y, z)
-            self.__plot_known_point(new_known_point)
+            cls._ax.clear()  # Clear the axis for the new plot
+            cls.__plot_plane_surface(x, y, z)
+            cls.__plot_known_point(new_known_point)
             plt.draw()
 
-    def __calculate_draw_dimensions(self, known_point: Point) -> int:
+    @classmethod
+    def __calculate_draw_dimensions(cls, known_point: Point) -> int:
         """Calculate the drawing dimensions to ensure the known point
         appears correctly on the plane.
 
@@ -421,8 +436,9 @@ class PlottingWindow:
             draw_dimensions += 1
         return draw_dimensions
 
+    @classmethod
     def calculate_xyz_table_for_plane(
-            self, 
+            cls, 
             plane: PlaneComputationalForm,
             known_point: Point 
             ) -> tuple[
@@ -442,14 +458,15 @@ class PlottingWindow:
             first column is X where the last is Z
         """
         # Calculate the xyz values that are required to plot a plane in 3D
-        plot_range = self.__calculate_draw_dimensions(known_point)
+        plot_range = cls.__calculate_draw_dimensions(known_point)
         mesh_grid = plane.generate_xy_pairs(axis_draw_length=plot_range)
         Z = plane.calculate_z_values(mesh_grid)
         X, Y = mesh_grid
         return X, Y, Z
 
+    @classmethod
     def __plot_plane_surface(
-            self, 
+            cls, 
             x: npt.NDArray[np.float64], 
             y: npt.NDArray[np.float64], 
             z: npt.NDArray[np.float64]
@@ -459,20 +476,21 @@ class PlottingWindow:
 
         Configures the axis labels and title before plotting the surface.
         """
-        self._ax.set_xlabel('X coordinates')
-        self._ax.set_ylabel('Y coordinates')
-        self._ax.set_zlabel('Z coordinates')
+        cls._ax.set_xlabel('X coordinates')
+        cls._ax.set_ylabel('Y coordinates')
+        cls._ax.set_zlabel('Z coordinates')
         title = '3D Plane from equation $a(x - x1) + b(y - y1) + c(z - z1) = 0$'
-        self._ax.set_title(title)
-        self._ax.plot_surface(x, y, z, alpha=0.5, rstride=1, cstride=1, color='b', label='Plane Surface')
+        cls._ax.set_title(title)
+        cls._ax.plot_surface(x, y, z, alpha=0.5, rstride=1, cstride=1, color='b', label='Plane Surface')
 
-    def __plot_known_point(self, known_point: Point):
+    @classmethod
+    def __plot_known_point(cls, known_point: Point):
         """Plot the point from the general equation and highlight it as orange. 
 
         Args:
             known_point: The known point on the plane that's to be plotted.
         """
-        self._ax.scatter(
+        cls._ax.scatter(
             known_point.x,
             known_point.y,
             known_point.z,
@@ -484,4 +502,4 @@ class PlottingWindow:
 
 if __name__ == '__main__':
     plane = PlaneGeneralForm(0.0, 0.0, 0.001, Point(0, 0, 0))
-    PlottingWindow(plane)
+    PlottingWindow.setup_plot_in_3d_space(plane)
